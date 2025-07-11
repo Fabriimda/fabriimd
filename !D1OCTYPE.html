@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Finanzas y Producción</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2pdf.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F8F8; /* Very light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #FFFFFF; /* White container */
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05); /* Softer shadow */
+            padding: 30px;
+            max-width: 900px; /* Adjusted max-width for single column layout */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 40px; /* Increased gap between main sections */
+        }
+        h1, h2 {
+            color: #333333; /* Dark gray for headings */
+            font-weight: 700;
+        }
+        label {
+            color: #555555; /* Medium gray for labels */
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="date"], /* Added style for date input */
+        select,
+        textarea { /* Added style for textarea */
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #E0E0E0; /* Lighter gray border */
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #4A4A4A; /* Darker gray text */
+            background-color: #F5F5F5; /* Light gray background */
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #A0A0A0; /* Medium gray on focus */
+            box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.2); /* Softer focus shadow */
+        }
+        button {
+            background-color: #607D8B; /* Muted blue-gray button */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s; /* Added transform and shadow transition */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #78909C; /* Slightly lighter blue-gray on hover */
+            transform: translateY(-2px); /* Lift effect */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Enhanced shadow */
+        }
+        button:active {
+            transform: translateY(0); /* Push down effect */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* Reduced shadow on click */
+        }
+        /* Specific styles for export buttons */
+        .export-button {
+            background-color: #8BC34A; /* Muted green for export */
+        }
+        .export-button:hover {
+            background-color: #9CCC65; /* Slightly lighter muted green on hover */
+        }
+        /* New PDF export button style */
+        .pdf-export-button {
+            background-color: #EF4444; /* Red for PDF */
+            margin-bottom: 20px; /* Space below the button */
+        }
+        .pdf-export-button:hover {
+            background-color: #DC2626; /* Darker red on hover */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03); /* Very subtle table shadow */
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #E0E0E0; /* Light border for rows */
+        }
+        th {
+            background-color: #EEEEEE; /* Light gray for table headers */
+            color: #4A4A4A; /* Darker gray for header text */
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .summary-card {
+            background-color: #F0F4F8; /* Very light blue-gray for summary */
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            color: #4A6572; /* Darker blue-gray for summary text */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .summary-card span {
+            font-size: 1.5rem;
+            color: #4A6572; /* Stronger blue-gray for values */
+        }
+        /* Balance colors */
+        .balance-positive {
+            color: #4CAF50 !important; /* Soft green for positive balance */
+        }
+        .balance-negative {
+            color: #F44336 !important; /* Soft red for negative balance */
+        }
+
+        /* Styles for section containers */
+        .section-container {
+            background-color: #FFFFFF; /* White background for each section */
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04); /* Subtle shadow for separation */
+            padding: 30px; /* Padding inside each section */
+            margin-bottom: 30px; /* Added margin-bottom for vertical separation */
+        }
+        .section-container:last-child {
+            margin-bottom: 0; /* No margin-bottom for the last section */
+        }
+
+        /* Statistics specific styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .stat-item {
+            background-color: #F5F5F5; /* Light gray for stat items */
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+        }
+        .stat-item p {
+            font-size: 0.9rem;
+            color: #555555;
+            margin-bottom: 5px;
+        }
+        .stat-item span {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333333;
+        }
+        .product-breakdown-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+        .product-breakdown-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #E0E0E0;
+            font-size: 0.95rem;
+            color: #4A4A4A;
+        }
+        .product-breakdown-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Chart specific styles */
+        .chart-container {
+            position: relative;
+            height: 300px; /* Fixed height for charts */
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #F5F5F5;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            .section-container {
+                padding: 20px; /* Reduce padding on small screens */
+            }
+            /* Ensure inner flex containers stack on small screens */
+            .flex-col-reverse-md {
+                flex-direction: column-reverse;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr; /* Stack stats on small screens */
+            }
+        }
+    </style>
+</head>
+<body class="font-inter">
+    <div class="container" id="appContent">
+        <h1 class="text-3xl mb-6 text-center">Control de Finanzas y Producción</h1>
+
+        <!-- Botón para Exportar a PDF -->
+        <button onclick="exportToPDF()" class="w-full pdf-export-button">Exportar Todo a PDF</button>
+
+        <!-- Sección de Resumen de Finanzas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="summary-card">
+                <p>Ingresos Totales:</p>
+                <span id="totalIncome">$0.00</span>
+            </div>
+            <div class="summary-card">
+                <p>Gastos Totales:</p>
+                <span id="totalExpenses">$0.00</span>
+            </div>
+            <div class="summary-card">
+                <p>Balance:</p>
+                <span id="balance">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Sección de Finanzas (Ingresos y Gastos) -->
+        <div class="section-container" id="financeSection">
+            <div class="flex flex-col md:flex-row gap-6 flex-col-reverse-md">
+                <div class="flex-1">
+                    <!-- Ingresos -->
+                    <h2 class="text-2xl mb-4">Registrar Ingresos</h2>
+                    <div class="mb-4">
+                        <label for="incomeDescription" class="block text-sm">Descripción:</label>
+                        <input type="text" id="incomeDescription" placeholder="Salario, Venta, etc." class="mt-1">
+                    </div>
+                    <div class="mb-4">
+                        <label for="incomeAmount" class="block text-sm">Monto:</label>
+                        <input type="number" id="incomeAmount" placeholder="0.00" class="mt-1" min="0" step="0.01">
+                    </div>
+                    <button onclick="addIncome()" class="w-full mb-8">Agregar Ingreso</button>
+
+                    <!-- Gastos -->
+                    <h2 class="text-2xl mb-4">Registrar Gastos</h2>
+                    <div class="mb-4">
+                        <label for="expenseDescription" class="block text-sm">Descripción:</label>
+                        <input type="text" id="expenseDescription" placeholder="Alquiler, Comida, etc." class="mt-1">
+                    </div>
+                    <div class="mb-4">
+                        <label for="expenseAmount" class="block text-sm">Monto:</label>
+                        <input type="number" id="expenseAmount" placeholder="0.00" class="mt-1" min="0" step="0.01">
+                    </div>
+                    <div class="mb-4">
+                        <label for="expenseCategory" class="block text-sm">Categoría:</label>
+                        <select id="expenseCategory" class="mt-1">
+                            <option value="">Selecciona una categoría</option>
+                            <option value="CHOCOLATE NEGRO ALPINO">CHOCOLATE NEGRO ALPINO</option>
+                            <option value="CHOCOLATE BLANCO ALPINO">CHOCOLATE BLANCO ALPINO</option>
+                            <option value="DULCE DE LECHE 10kg">DULCE DE LECHE 10kg</option>
+                            <option value="GALLETITAS ALFAJOR MINI">GALLETITAS ALFAJOR MINI</option>
+                            <option value="GALLETITAS ALFAJOR CLASICO">GALLETITAS ALFAJOR CLASICO</option>
+                            <option value="GALLETITAS DE LIMON">GALLETITAS DE LIMON</option>
+                            <option value="INSUMOS">INSUMOS</option>
+                            <option value="GAS">GAS</option>
+                            <option value="ELECTRICIDAD">ELECTRICIDAD</option>
+                            <option value="ALQUILER DEL LOCAL">ALQUILER DEL LOCAL</option>
+                        </select>
+                    </div>
+                    <button onclick="addExpense()" class="w-full">Agregar Gasto</button>
+                </div>
+
+                <!-- Listas de Ingresos y Gastos -->
+                <div class="flex-1" id="financeHistoryContent">
+                    <h2 class="text-2xl mb-4">Historial de Ingresos</h2>
+                    <div class="overflow-x-auto mb-8">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incomeList">
+                                <!-- Ingresos se agregarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h2 class="text-2xl mb-4">Historial de Gastos</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Categoría</th>
+                                    <th>Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseList">
+                                <!-- Gastos se agregarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Botones de exportación de finanzas -->
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button onclick="exportToCSV('incomes')" class="export-button">Exportar Ingresos a CSV</button>
+                        <button onclick="exportToCSV('expenses')" class="export-button">Exportar Gastos a CSV</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Producción de Productos -->
+        <div class="section-container" id="productionSection">
+            <h2 class="text-2xl mb-4">Registrar Producción de Productos</h2>
+            <div class="mb-4">
+                <label for="productionDate" class="block text-sm">Fecha:</label>
+                <input type="date" id="productionDate" class="mt-1">
+            </div>
+            <div class="mb-4">
+                <label for="productQuantity" class="block text-sm">Cantidad de Unidades Producidas:</label>
+                <input type="number" id="productQuantity" placeholder="0" class="mt-1" min="0" step="1">
+            </div>
+            <div class="mb-4">
+                <label for="productType" class="block text-sm">Tipo de Producto:</label>
+                <select id="productType" class="mt-1">
+                    <option value="">Selecciona un tipo</option>
+                    <option value="Alfajores Minis Blanco">Alfajores Minis Blanco</option>
+                    <option value="Alfajores Minis Negro">Alfajores Minis Negro</option>
+                    <option value="Alfajores Clásicos Blanco">Alfajores Clásicos Blanco</option>
+                    <option value="Alfajores Clásicos Negro">Alfajores Clásicos Negro</option>
+                    <option value="Conitos">Conitos</option>
+                    <option value="Galletitas de Limón Bañadas">Galletitas de Limón Bañadas</option>
+                    <option value="Galletitas de Limón Sin Bañar">Galletitas de Limón Sin Bañar</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label for="productionNotes" class="block text-sm">Notas (opcional):</label>
+                <textarea id="productionNotes" rows="3" placeholder="Detalles adicionales sobre la producción..." class="mt-1"></textarea>
+            </div>
+            <button onclick="addProductionRecord()" class="w-full mb-8">Agregar Registro de Producción</button>
+
+            <h2 class="text-2xl mb-4">Historial de Producción</h2>
+            <div class="overflow-x-auto" id="productionHistoryContent">
+                <table class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cantidad</th>
+                            <th>Tipo</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productionList">
+                        <!-- Registros de producción se agregarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Botón de exportación de producción -->
+            <div class="mt-6 flex justify-end">
+                <button onclick="exportToCSV('production')" class="export-button">Exportar Producción a CSV</button>
+            </div>
+        </div>
+
+        <!-- Sección de Estadísticas de Ganancias -->
+        <div class="section-container" id="profitStatsSection">
+            <h2 class="text-2xl mb-4">Estadísticas de Ganancias</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <p>Ganancia Bruta (Ingresos Totales):</p>
+                    <span id="statGrossProfit">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <p>Ganancia Neta (Ingresos - Gastos):</p>
+                    <span id="statNetProfit">$0.00</span>
+                </div>
+            </div>
+            <h3 class="text-xl mt-6 mb-3 text-gray-700">Distribución de Ingresos y Gastos:</h3>
+            <div class="chart-container">
+                <canvas id="profitDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Sección de Estadísticas de Producción -->
+        <div class="section-container" id="productionStatsSection">
+            <h2 class="text-2xl mb-4">Estadísticas de Producción</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <p>Total de Unidades Producidas:</p>
+                    <span id="statTotalProduction">0</span>
+                </div>
+            </div>
+            <h3 class="text-xl mt-6 mb-3 text-gray-700">Distribución de Producción por Tipo:</h3>
+            <div class="chart-container">
+                <canvas id="productionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let incomes = [];
+        let expenses = [];
+        let productionRecords = []; // New array for production data
+
+        let profitDistributionChartInstance; // Global variable for profit distribution chart instance
+        let productionChartInstance; // Global variable for production chart instance
+
+        // Function to format currency
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        };
+
+        // Function to update the financial summary and profit statistics
+        const updateSummaryAndProfitStatistics = () => {
+            const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+            const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+            const netProfit = totalIncome - totalExpenses; // This is the Net Profit
+
+            // Update top summary cards
+            document.getElementById('totalIncome').textContent = formatCurrency(totalIncome);
+            document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
+            
+            const balanceElement = document.getElementById('balance');
+            balanceElement.textContent = formatCurrency(netProfit); // Balance is net profit
+
+            // Change class for balance color
+            balanceElement.classList.remove('balance-positive', 'balance-negative');
+            if (netProfit < 0) {
+                balanceElement.classList.add('balance-negative');
+            } else {
+                balanceElement.classList.add('balance-positive');
+            }
+
+            // Update profit statistics section
+            document.getElementById('statGrossProfit').textContent = formatCurrency(totalIncome);
+            document.getElementById('statNetProfit').textContent = formatCurrency(netProfit);
+
+            // Update profit distribution chart
+            updateProfitDistributionChart();
+        };
+
+        // Function to add an income record
+        const addIncome = () => {
+            const descriptionInput = document.getElementById('incomeDescription');
+            const amountInput = document.getElementById('incomeAmount');
+
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+
+            if (description === '' || isNaN(amount) || amount <= 0) {
+                alert('Por favor, ingresa una descripción y un monto válido para el ingreso.');
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('es-AR');
+            incomes.push({ date, description, amount });
+            renderIncomes();
+            updateSummaryAndProfitStatistics(); // Update all financial stats and charts
+
+            descriptionInput.value = '';
+            amountInput.value = '';
+        };
+
+        // Function to render the income list
+        const renderIncomes = () => {
+            const incomeList = document.getElementById('incomeList');
+            incomeList.innerHTML = ''; // Clear the list before rendering
+
+            incomes.forEach(item => {
+                const row = incomeList.insertRow();
+                row.insertCell(0).textContent = item.date;
+                row.insertCell(1).textContent = item.description;
+                row.insertCell(2).textContent = formatCurrency(item.amount);
+            });
+        };
+
+        // Function to add an expense record
+        const addExpense = () => {
+            const descriptionInput = document.getElementById('expenseDescription');
+            const amountInput = document.getElementById('expenseAmount');
+            const categorySelect = document.getElementById('expenseCategory');
+
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const category = categorySelect.value;
+
+            if (description === '' || isNaN(amount) || amount <= 0 || category === '') {
+                alert('Por favor, ingresa una descripción, un monto válido y selecciona una categoría para el gasto.');
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('es-AR');
+            expenses.push({ date, description, amount, category });
+            renderExpenses();
+            updateSummaryAndProfitStatistics(); // Update all financial stats and charts
+
+            descriptionInput.value = '';
+            amountInput.value = '';
+            categorySelect.value = ''; // Reset category selection
+        };
+
+        // Function to render the expense list
+        const renderExpenses = () => {
+            const expenseList = document.getElementById('expenseList');
+            expenseList.innerHTML = ''; // Clear the list before rendering
+
+            expenses.forEach(item => {
+                const row = expenseList.insertRow();
+                row.insertCell(0).textContent = item.date;
+                row.insertCell(1).textContent = item.description;
+                row.insertCell(2).textContent = item.category;
+                row.insertCell(3).textContent = formatCurrency(item.amount);
+            });
+        };
+
+        // Function to add a production record
+        const addProductionRecord = () => {
+            const dateInput = document.getElementById('productionDate');
+            const quantityInput = document.getElementById('productQuantity');
+            const typeSelect = document.getElementById('productType');
+            const notesInput = document.getElementById('productionNotes');
+
+            const date = dateInput.value; // Date in YYYY-MM-DD format
+            const quantity = parseInt(quantityInput.value);
+            const type = typeSelect.value;
+            const notes = notesInput.value.trim();
+
+            if (date === '' || isNaN(quantity) || quantity <= 0 || type === '') {
+                alert('Por favor, ingresa una fecha, una cantidad válida y selecciona un tipo de producto.');
+                return;
+            }
+
+            productionRecords.push({ date, quantity, type, notes });
+            renderProductionRecords();
+            updateProductionStatistics(); // Update production statistics and chart
+
+            dateInput.value = '';
+            quantityInput.value = '';
+            typeSelect.value = '';
+            notesInput.value = '';
+        };
+
+        // Function to render the production list
+        const renderProductionRecords = () => {
+            const productionList = document.getElementById('productionList');
+            productionList.innerHTML = ''; // Clear the list before rendering
+
+            productionRecords.forEach(item => {
+                const row = productionList.insertRow();
+                row.insertCell(0).textContent = item.date;
+                row.insertCell(1).textContent = item.quantity;
+                row.insertCell(2).textContent = item.type;
+                row.insertCell(3).textContent = item.notes;
+            });
+        };
+
+        // Function to update profit distribution chart
+        const updateProfitDistributionChart = () => {
+            const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+            const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+            const netProfit = totalIncome - totalExpenses;
+
+            // Data for the pie chart: Net Profit and Total Expenses
+            const labels = ['Ganancia Neta', 'Gastos Totales'];
+            const data = [netProfit > 0 ? netProfit : 0, totalExpenses]; // Ensure net profit is not negative for pie chart slice
+            const backgroundColors = ['rgba(76, 175, 80, 0.7)', 'rgba(244, 67, 54, 0.7)']; // Green for profit, red for expenses
+            const borderColors = ['rgba(76, 175, 80, 1)', 'rgba(244, 67, 54, 1)'];
+
+            // Handle cases where there's no income or expenses for a meaningful chart
+            if (totalIncome === 0 && totalExpenses === 0) {
+                 labels.length = 0; // Clear labels
+                 data.length = 0; // Clear data
+                 backgroundColors.length = 0;
+                 borderColors.length = 0;
+                 labels.push('Sin Datos');
+                 data.push(1); // A small slice to indicate no data
+                 backgroundColors.push('rgba(200, 200, 200, 0.7)');
+                 borderColors.push('rgba(200, 200, 200, 1)');
+            } else if (totalIncome > 0 && totalExpenses === 0) {
+                 // Only income, no expenses
+                 labels.length = 0;
+                 data.length = 0;
+                 backgroundColors.length = 0;
+                 borderColors.length = 0;
+                 labels.push('Ganancia Neta');
+                 data.push(netProfit);
+                 backgroundColors.push('rgba(76, 175, 80, 0.7)');
+                 borderColors.push('rgba(76, 175, 80, 1)');
+            } else if (totalIncome === 0 && totalExpenses > 0) {
+                 // Only expenses, no income
+                 labels.length = 0;
+                 data.length = 0;
+                 backgroundColors.length = 0;
+                 borderColors.length = 0;
+                 labels.push('Gastos Totales');
+                 data.push(totalExpenses);
+                 backgroundColors.push('rgba(244, 67, 54, 0.7)');
+                 borderColors.push('rgba(244, 67, 54, 1)');
+            }
+
+
+            if (profitDistributionChartInstance) {
+                profitDistributionChartInstance.data.labels = labels;
+                profitDistributionChartInstance.data.datasets[0].data = data;
+                profitDistributionChartInstance.data.datasets[0].backgroundColor = backgroundColors;
+                profitDistributionChartInstance.data.datasets[0].borderColor = borderColors;
+                profitDistributionChartInstance.update();
+            } else {
+                const ctx = document.getElementById('profitDistributionChart').getContext('2d');
+                profitDistributionChartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
+                            borderWidth: 1,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right', // Position legend to the right
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += formatCurrency(context.parsed);
+                                            // Add percentage
+                                            const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+                                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(2) + '%' : '0%';
+                                            label += ` (${percentage})`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Function to update production statistics and chart
+        const updateProductionStatistics = () => {
+            const totalProduction = productionRecords.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('statTotalProduction').textContent = totalProduction;
+
+            // Calculate production breakdown by type
+            const breakdown = {};
+            productionRecords.forEach(record => {
+                if (breakdown[record.type]) {
+                    breakdown[record.type] += record.quantity;
+                } else {
+                    breakdown[record.type] = record.quantity;
+                }
+            });
+
+            const productionLabels = [];
+            const productionData = [];
+            const backgroundColors = [];
+            const borderColors = [];
+
+            const colorPalette = [
+                'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+                'rgba(199, 199, 199, 0.6)', 'rgba(83, 102, 255, 0.6)', 'rgba(100, 100, 100, 0.6)'
+            ];
+            const borderPalette = [
+                'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)',
+                'rgba(199, 199, 199, 1)', 'rgba(83, 102, 255, 1)', 'rgba(100, 100, 100, 1)'
+            ];
+            let colorIndex = 0;
+
+            for (const type in breakdown) {
+                productionLabels.push(type);
+                productionData.push(breakdown[type]);
+                backgroundColors.push(colorPalette[colorIndex % colorPalette.length]);
+                borderColors.push(borderPalette[colorIndex % borderPalette.length]);
+                colorIndex++;
+            }
+
+            // Handle case where there's no production data for a meaningful chart
+            if (productionLabels.length === 0) {
+                 productionLabels.push('Sin Datos');
+                 productionData.push(1); // A small slice to indicate no data
+                 backgroundColors.push('rgba(200, 200, 200, 0.7)');
+                 borderColors.push('rgba(200, 200, 200, 1)');
+            }
+
+            // Update or create production chart
+            if (productionChartInstance) {
+                productionChartInstance.data.labels = productionLabels;
+                productionChartInstance.data.datasets[0].data = productionData;
+                productionChartInstance.data.datasets[0].backgroundColor = backgroundColors;
+                productionChartInstance.data.datasets[0].borderColor = borderColors;
+                productionChartInstance.update();
+            } else {
+                const ctx = document.getElementById('productionChart').getContext('2d');
+                productionChartInstance = new Chart(ctx, {
+                    type: 'pie', // Changed to pie chart
+                    data: {
+                        labels: productionLabels,
+                        datasets: [{
+                            label: 'Unidades Producidas',
+                            data: productionData,
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
+                            borderWidth: 1,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right', // Position legend to the right
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += `${context.parsed} unidades`;
+                                            // Add percentage
+                                            const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+                                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(2) + '%' : '0%';
+                                            label += ` (${percentage})`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Function to export data to CSV
+        const exportToCSV = (type) => {
+            let data = [];
+            let headers = [];
+            let filename = '';
+
+            if (type === 'incomes') {
+                headers = ['Fecha', 'Descripción', 'Monto'];
+                data = incomes.map(item => [item.date, item.description, item.amount]);
+                filename = 'ingresos.csv';
+            } else if (type === 'expenses') {
+                headers = ['Fecha', 'Descripción', 'Categoría', 'Monto'];
+                data = expenses.map(item => [item.date, item.description, item.category, item.amount]);
+                filename = 'gastos.csv';
+            } else if (type === 'production') { // New case for production data
+                headers = ['Fecha', 'Cantidad', 'Tipo', 'Notas'];
+                data = productionRecords.map(item => [item.date, item.quantity, item.type, item.notes]);
+                filename = 'produccion_productos.csv'; // Changed filename
+            } else {
+                return;
+            }
+
+            // Convert data to CSV format
+            let csvContent = headers.join(',') + '\n';
+            data.forEach(row => {
+                // Escape commas and quotes in data fields
+                const escapedRow = row.map(field => {
+                    const stringField = String(field);
+                    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+                        return `"${stringField.replace(/"/g, '""')}"`;
+                    }
+                    return stringField;
+                });
+                csvContent += escapedRow.join(',') + '\n';
+            });
+
+            // Create a Blob and a download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Feature detection
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+
+        // Function to export the entire HTML content to PDF
+        const exportToPDF = () => {
+            const element = document.getElementById('appContent'); // Get the main container element
+            const options = {
+                margin: 10,
+                filename: 'reporte_finanzas_produccion.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(options).from(element).save();
+        };
+
+
+        // Initialize the application on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSummaryAndProfitStatistics();
+            updateProductionStatistics();
+        });
+    </script>
+</body>
+</html>
